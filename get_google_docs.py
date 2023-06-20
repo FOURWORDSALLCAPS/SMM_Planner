@@ -4,6 +4,7 @@ from apiclient import discovery
 from oauth2client.service_account import ServiceAccountCredentials
 from googleapiclient.errors import HttpError
 from urllib.parse import urlparse
+from datetime import datetime
 
 
 def get_documents(credentials_file, document_id):
@@ -50,6 +51,16 @@ def get_spreadsheet(credentials_file, spreadsheet_id):
         values = None
 
     return values
+
+
+def get_datetime(text_sheet):
+    date_publication = text_sheet['values'][1][1]
+    time_publication = text_sheet['values'][1][2]
+    date = datetime.strptime(date_publication, '%d.%m.%Y')
+    time = datetime.strptime(time_publication, '%H:%M')
+    datetime_publication = datetime.combine(date, time.time())
+
+    return datetime_publication.timestamp()
 
 
 def cut_url(text_sheet):
