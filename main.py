@@ -1,17 +1,11 @@
 import asyncio
+import time
 
 from environs import Env
-from get_google_docs import get_documents, get_spreadsheet, get_datetime, cut_url
 from upload_photo import upload_photo_to_album
-from vkbottle import API
-
-
-async def create_post_vk(token, chat_id, text_publication, datetime_publication, photo):
-    api = API(token)
-    await api.wall.post(owner_id=chat_id,
-                        publish_date=int(datetime_publication),
-                        attachments=photo,
-                        message=text_publication)
+from create_post import create_post_vk, create_post_tg
+from delete_post import delete_post_vk, delete_post_tg
+from secondary_functions import get_documents, get_spreadsheet, download_photo, cut_url
 
 
 async def main():
@@ -22,14 +16,23 @@ async def main():
     vk_chat_id = env('VK_CHAT_ID')
     vk_group_id = env('VK_GROUP_ID')
     vk_token = env('VK_TOKEN')
+    tg_token = env('TG_TOKEN')
+    tg_chat_id = env('TG_CHAT_ID')
     album_id = env('ALBUM_ID')
-    file_path = env('FILE_PATH')
     text_sheet = get_spreadsheet(credentials_file, spreadsheet_id)
     url_google_docs = cut_url(text_sheet)
     text_publication = get_documents(credentials_file, url_google_docs)
-    datetime_publication = get_datetime(text_sheet)
+    download_photo(text_sheet['values'][1][1])
+    file_path = env('FILE_PATH')
     photo = await upload_photo_to_album(vk_token, vk_group_id, album_id, file_path)
-    await create_post_vk(vk_token, vk_chat_id, text_publication, datetime_publication, photo)
+    try:
+        post_id = await create_post_vk(vk_token, vk_chat_id, text_publication, photo)
+        message_id = await create_post_tg(tg_token, tg_chat_id, file_path, text_publication)
+        time.sleep(5)
+        await delete_post_vk(vk_token, vk_chat_id, post_id=post_id)
+        await delete_post_tg(tg_token, tg_chat_id, message_id=message_id)
+    except Exception as e:
+        print(f'Произошла ошибка: {e}')
 
 
 if __name__ == '__main__':
