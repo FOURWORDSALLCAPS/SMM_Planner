@@ -5,6 +5,7 @@ from environs import Env
 from upload_photo import upload_photo_to_album
 from create_post import create_post_vk, create_post_tg
 from delete_post import delete_post_vk, delete_post_tg
+from get_link_post import get_link_post_vk, get_link_post_tg
 from secondary_functions import get_documents, get_spreadsheet, download_photo, cut_url
 
 
@@ -28,9 +29,11 @@ async def main():
     try:
         post_id = await create_post_vk(vk_token, vk_chat_id, text_publication, photo)
         message_id = await create_post_tg(tg_token, tg_chat_id, file_path, text_publication)
-        time.sleep(5)
-        await delete_post_vk(vk_token, vk_chat_id, post_id=post_id)
-        await delete_post_tg(tg_token, tg_chat_id, message_id=message_id)
+        # time.sleep(5)
+        # await delete_post_vk(vk_token, vk_chat_id, post_id=post_id)
+        # await delete_post_tg(tg_token, tg_chat_id, message_id=message_id)
+        link_post_vk = get_link_post_vk(vk_group_id, post_id)
+        link_post_tg = get_link_post_tg(tg_chat_id, message_id)
     except Exception as e:
         print(f'Произошла ошибка: {e}')
 
