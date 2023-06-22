@@ -1,10 +1,10 @@
 import httplib2
+import urllib.request
 
 from apiclient import discovery
 from oauth2client.service_account import ServiceAccountCredentials
 from googleapiclient.errors import HttpError
 from urllib.parse import urlparse
-from datetime import datetime
 
 
 def get_documents(credentials_file, document_id):
@@ -53,16 +53,6 @@ def get_spreadsheet(credentials_file, spreadsheet_id):
     return values
 
 
-def get_datetime(text_sheet):
-    date_publication = text_sheet['values'][1][1]
-    time_publication = text_sheet['values'][1][2]
-    date = datetime.strptime(date_publication, '%d.%m.%Y')
-    time = datetime.strptime(time_publication, '%H:%M')
-    datetime_publication = datetime.combine(date, time.time())
-
-    return datetime_publication.timestamp()
-
-
 def cut_url(text_sheet):
     url_bytes = text_sheet['values'][1][0].encode('utf-8')
     url_parse = urlparse(url_bytes)
@@ -70,3 +60,8 @@ def cut_url(text_sheet):
     doc_id = path_parts[3].replace(b'edit', b'')
 
     return doc_id.decode('utf-8')
+
+
+def download_photo(url):
+    filename = "image.jpg"
+    urllib.request.urlretrieve(url, "images/" + filename)
