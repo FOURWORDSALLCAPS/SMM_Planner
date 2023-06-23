@@ -44,7 +44,7 @@ def get_spreadsheet(credentials_file, spreadsheet_id):
     try:
         values = service.spreadsheets().values().get(
             spreadsheetId=spreadsheet_id,
-            range='A1:E10',
+            range='A1:P10',
             majorDimension='ROWS',
         ).execute()
     except HttpError:
@@ -53,8 +53,27 @@ def get_spreadsheet(credentials_file, spreadsheet_id):
     return values
 
 
-def cut_url(text_sheet):
-    url_bytes = text_sheet['values'][1][0].encode('utf-8')
+def fill_cell(credentials_file, spreadsheet_id, cell_id, url):
+    credentials = ServiceAccountCredentials.from_json_keyfile_name(
+        credentials_file,
+        ['https://www.googleapis.com/auth/spreadsheets',
+         'https://www.googleapis.com/auth/drive'])
+    http_auth = credentials.authorize(httplib2.Http())
+    service = discovery.build('sheets', 'v4', http=http_auth)
+    service.spreadsheets().values().batchUpdate(
+        spreadsheetId=spreadsheet_id,
+        body={
+            "valueInputOption": "USER_ENTERED",
+            "data": [
+                {"range": f"N{cell_id}:N{cell_id}",
+                 "values": [[f"{url}"]]},
+            ]
+        }
+    ).execute()
+
+
+def cut_url(text_sheet, cell_id):
+    url_bytes = text_sheet['values'][cell_id][0].encode('utf-8')
     url_parse = urlparse(url_bytes)
     path_parts = url_parse.path.split(b'/')
     doc_id = path_parts[3].replace(b'edit', b'')
@@ -62,6 +81,13 @@ def cut_url(text_sheet):
     return doc_id.decode('utf-8')
 
 
-def download_photo(url):
+def get_url_photo(text_sheet, cell_id):
+    url_photo = text_sheet['values'][cell_id][1]
+
+    return url_photo
+
+
+def download_photo(text_sheet, cell_id):
+    url = text_sheet['values'][cell_id][1]
     filename = "image.jpg"
     urllib.request.urlretrieve(url, "images/" + filename)
