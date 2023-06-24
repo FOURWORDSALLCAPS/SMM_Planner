@@ -17,8 +17,8 @@ def get_documents(credentials_file, document_id):
 
     try:
         values = service.documents().get(documentId=document_id).execute()
-    except HttpError:
-        values = None
+    except HttpError as e:
+        return e
 
     if values:
         doc_content = values.get('body').get('content')
@@ -53,7 +53,7 @@ def get_spreadsheet(credentials_file, spreadsheet_id):
     return values
 
 
-def fill_cell(credentials_file, spreadsheet_id, cell_id, url):
+def fill_cell(credentials_file, spreadsheet_id, cell_id, message):
     credentials = ServiceAccountCredentials.from_json_keyfile_name(
         credentials_file,
         ['https://www.googleapis.com/auth/spreadsheets',
@@ -65,8 +65,8 @@ def fill_cell(credentials_file, spreadsheet_id, cell_id, url):
         body={
             "valueInputOption": "USER_ENTERED",
             "data": [
-                {"range": f"N{cell_id}:N{cell_id}",
-                 "values": [[f"{url}"]]},
+                {"range": f"{cell_id}:{cell_id}",
+                 "values": [[f"{message}"]]},
             ]
         }
     ).execute()
