@@ -1,14 +1,15 @@
 import gspread
-import datetime
 import asyncio
 import time
 import datetime
+import logging
+
 from environs import Env
 from upload_photo import upload_photo_to_album
 from create_post import create_post_vk, create_post_tg
 from delete_post import delete_post_vk, delete_post_tg
 from get_link_post import get_link_post_vk, get_link_post_tg
-from secondary_functions import get_documents, get_spreadsheet, download_photo, get_url_photo, fill_cell, cut_url
+from secondary_functions import get_documents, get_spreadsheet, download_photo, fill_cell, cut_url
 from oauth2client.service_account import ServiceAccountCredentials
 
 
@@ -20,7 +21,9 @@ async def main():
 
     client = gspread.authorize(credentials)
 
-    today = datetime.date.today()
+    vk_posts_ids_to_delete = []
+
+    tg_posts_ids_to_delete = []
 
     while True:
         sheet = client.open('SMMPlanner').sheet1
@@ -28,32 +31,78 @@ async def main():
         headers = data[0]
         rows = data[1:]
         row_dict = {}
+        today = datetime.date.today()
+        now = datetime.datetime.now()
+        current_time = now.strftime("%H:%M")
         for index, row in enumerate(rows):
             for idx, val in enumerate(row):
                 header = headers[idx]
                 row_dict[header] = val
             if row_dict.get('Дата постинга\nпубликации'):
-                date_from_dict = datetime.datetime.strptime(row_dict['Дата постинга\nпубликации'], '%d.%m.%Y').date()
+                date_publication = datetime.datetime.strptime(row_dict['Дата постинга\nпубликации'], '%d.%m.%Y').date()
             else:
-                date_from_dict = None
-            if date_from_dict == today:
-                try:
-                    text_sheet = get_spreadsheet(credentials_file, spreadsheet_id)
-                    url_google_docs = cut_url(text_sheet, index + 1)
-                    text_publication = get_documents(credentials_file, url_google_docs)
-                    download_photo(text_sheet, index + 1)
-                    photo = await upload_photo_to_album(vk_token, vk_group_id, album_id, file_path)
-                    post_id = await create_post_vk(vk_token, vk_chat_id, text_publication, photo)
-                    link_post_vk = get_link_post_vk(vk_group_id, post_id)
-                    fill_cell(credentials_file, spreadsheet_id, index + 2, link_post_vk)
-                    time.sleep(0.5)
-                except Exception as e:
-                    print(f'Произошла ошибка: {e}')
-
+                date_publication = None
+            if row_dict.get('Дата удаления\nпубликации'):
+                date_delete_publication = datetime.datetime.strptime(row_dict['Дата удаления\nпубликации'], '%d.%m.%Y')\
+                    .date()
+            else:
+                date_delete_publication = None
+            if row_dict.get('Время постинга\nпубликации'):
+                time_publication = datetime.datetime.strptime(row_dict['Время постинга\nпубликации'], '%H:%M')\
+                    .strftime('%H:%M')
+            else:
+                time_publication = None
+            if row_dict.get('Время удаления\nпубликации'):
+                time_delete_publication = datetime.datetime.strptime(row_dict['Время удаления\nпубликации'], '%H:%M')\
+                    .strftime('%H:%M')
+            else:
+                time_delete_publication = None
+            if date_publication == today:
+                if time_publication == current_time:
+                    try:
+                        text_sheet = get_spreadsheet(credentials_file, spreadsheet_id)
+                        url_google_docs = cut_url(text_sheet, index + 1)
+                        text_publication = get_documents(credentials_file, url_google_docs)
+                        download_photo(text_sheet, index + 1)
+                        if row_dict.get('Соц. сеть\nVK') == 'Да' and not row_dict.get('Статус публикации\nVk'):
+                            photo = await upload_photo_to_album(vk_token, vk_group_id, album_id, file_path)
+                            post_id = await create_post_vk(vk_token, vk_chat_id, text_publication, photo)
+                            link_post_vk = get_link_post_vk(vk_group_id, post_id)
+                            fill_cell(credentials_file, spreadsheet_id, f'N{index + 2}', link_post_vk)
+                            fill_cell(credentials_file, spreadsheet_id, f'Q{index + 2}', 'Да')
+                            if date_delete_publication >= today:
+                                vk_posts_ids_to_delete.append(post_id)
+                            print('Создание поста в Vk прошло успешно!')
+                        elif row_dict.get('Соц. сеть\nTelegram') == 'Да' and not row_dict.get('Статус публикации\nTg'):
+                            message_id = await create_post_tg(tg_token, tg_chat_id, file_path, text_publication)
+                            link_post_tg = get_link_post_tg(tg_chat_id, message_id)
+                            fill_cell(credentials_file, spreadsheet_id, f'O{index + 2}', link_post_tg)
+                            fill_cell(credentials_file, spreadsheet_id, f'R{index + 2}', 'Да')
+                            if date_delete_publication >= today:
+                                tg_posts_ids_to_delete.append(message_id)
+                            print('Создание поста в Telegram прошло успешно!')
+                        time.sleep(0.5)
+                    except Exception as e:
+                        print(f'Произошла ошибка: {e}')
+            if date_delete_publication == today:
+                if time_delete_publication == current_time:
+                    try:
+                        if vk_posts_ids_to_delete:
+                            for post_id in vk_posts_ids_to_delete:
+                                await delete_post_vk(vk_token, vk_chat_id, post_id)
+                            print('Удаление поста в Vk прошло успешно!')
+                        if tg_posts_ids_to_delete:
+                            for message_id in tg_posts_ids_to_delete:
+                                await delete_post_tg(tg_token, tg_chat_id, message_id)
+                            print('Удаление поста в Telegram прошло успешно!')
+                    except Exception as e:
+                        print(f'Произошла ошибка: {e}')
         time.sleep(10)
 
 
 if __name__ == '__main__':
+    logger = logging.getLogger()
+    logger.setLevel(logging.WARNING)
     env = Env()
     env.read_env()
     credentials_file = 'creds.json'
@@ -67,3 +116,4 @@ if __name__ == '__main__':
     file_path = env('FILE_PATH')
     loop = asyncio.get_event_loop()
     loop.run_until_complete(main())
+    loop.close()
