@@ -84,17 +84,6 @@ async def main():
                                 if date_delete_publication >= today:
                                     tg_posts_ids_to_delete.append(message_id)
                                 print('Создание поста в Telegram прошло успешно!')
-
-                             elif row_dict.get('Соц. сеть\nOK') == 'Да' \
-                                    and not row_dict.get('Статус публикации\nOK'):
-                                post_id = await create_post_ok(ok_public_key, ok_group_id, ok_access_token, ok_secret_key, text_publication)
-                                #link_post_tg = get_link_post_tg(tg_chat_id, message_id)
-                                #fill_cell(credentials_file, spreadsheet_id, f'O{index + 2}', link_post_tg)
-                                fill_cell(credentials_file, spreadsheet_id, f'R{index + 2}', 'Да')
-                                #if date_delete_publication >= today:
-                                    #tg_posts_ids_to_delete.append(message_id)
-                                print('Создание поста в OK прошло успешно!')
-                            
                             time.sleep(0.5)
                         except Exception as e:
                             if isinstance(e, IndexError) and str(e) == 'list index out of range':
@@ -132,11 +121,6 @@ if __name__ == '__main__':
     tg_token = env('TG_TOKEN')
     tg_chat_id = env('TG_CHAT_ID')
     album_id = env('ALBUM_ID')
-    ok_app_id = '512001977033'
-    ok_public_key = 'CKMLCDLGDIHBABABA'
-    ok_secret_key = '411dc5cddc8a8fb72ed2edc69ea64fc6'
-    ok_access_token = 'tkn1YWGyuHIjjlUDoX9MYHgQlg7Pvj0vE9O0eVJ8M0ZZR8LmgvwBO4zYmPtunD2daZ2Ie1'
-    ok_group_id = '70000002836096' 
     file_path = env('FILE_PATH')
     loop = asyncio.get_event_loop()
     loop.run_until_complete(main())
