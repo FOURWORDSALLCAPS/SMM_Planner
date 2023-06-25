@@ -90,7 +90,7 @@ async def main():
                                     and not row_dict.get('Статус публикации\nOK'):
                                 ok_post_id = await create_post_ok(ok_public_key, ok_group_id, ok_access_token, ok_secret_key, text_publication)
                                 link_post_ок = get_link_post_ок(ok_group_id, ok_post_id)
-                                fill_cell(credentials_file, spreadsheet_id, f'O{index + 2}', link_post_ok)
+                                #fill_cell(credentials_file, spreadsheet_id, f'O{index + 2}', link_post_tg)
                                 fill_cell(credentials_file, spreadsheet_id, f'R{index + 2}', 'Да')
                                 #if date_delete_publication >= today:
                                     #tg_posts_ids_to_delete.append(message_id)
