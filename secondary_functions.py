@@ -1,5 +1,7 @@
 import httplib2
 import urllib.request
+import hashlib
+import time
 
 from apiclient import discovery
 from oauth2client.service_account import ServiceAccountCredentials
@@ -91,3 +93,19 @@ def download_photo(text_sheet, cell_id):
     url = text_sheet['values'][cell_id][1]
     filename = "image.jpg"
     urllib.request.urlretrieve(url, "images/" + filename)
+
+
+def create_sign(public_key, group_id, method, access_token, secret_key):
+    timestamp = str(time.time())
+    sign_str = f"application_key={public_key}ok_group_id={group_id}method={method}type=GROUP_THEMEformat=jsonmethod=" \
+               f"{method}{timestamp}{access_token}{secret_key}"
+    sign = hashlib.md5(sign_str.encode('utf-8')).hexdigest()
+
+    return sign
+
+
+def create_url(public_key, method, sign, access_token):
+    url = f"https://api.ok.ru/fb.do?application_key={public_key}&method={method}&format=json&sig=" \
+          f"{sign}&ok_access_token={access_token}"
+
+    return url
