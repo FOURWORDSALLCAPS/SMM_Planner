@@ -5,6 +5,7 @@ import datetime
 import logging
 
 from environs import Env
+from ok import create_post_ok
 from upload_photo import upload_photo_to_album
 from create_post import create_post_vk, create_post_tg
 from delete_post import delete_post_vk, delete_post_tg
