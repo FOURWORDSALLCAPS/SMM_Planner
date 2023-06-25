@@ -1,3 +1,14 @@
+import requests
+import hashlib
+import time
+import json
+
+ok_app_id = '512001977033'
+ok_public_key = 'CKMLCDLGDIHBABABA'
+ok_secret_key = '411dc5cddc8a8fb72ed2edc69ea64fc6'
+ok_access_token = 'tkn1YWGyuHIjjlUDoX9MYHgQlg7Pvj0vE9O0eVJ8M0ZZR8LmgvwBO4zYmPtunD2daZ2Ie1'
+ok_group_id = '70000002836096' 
+
 def create_sign(ok_public_key, ok_group_id, method, ok_access_token, ok_secret_key): 
     timestamp = str(time.time())
     sign_str = f"application_key={ok_public_key}ok_group_id={ok_group_id}method={method}type=GROUP_THEMEformat=jsonmethod={method}{timestamp}{ok_access_token}{ok_secret_key}"
@@ -27,7 +38,7 @@ def create_post_ok(ok_public_key, ok_group_id, ok_access_token, ok_secret_key, t
                                         'attachment': json.dumps(attachment)})
     
     try:
-        response = requests.post(url, data={'gid': ok_group_id, 'type': 'GROUP_THEME', 'attachment': json.dumps(attachment)})
+        response = requests.post(url, data={'gid': ok_group_id, 'type': 'GROUP_THEME', 'access_token': ok_access_token, 'attachment': json.dumps(attachment)})
         response.raise_for_status()
     except requests.exceptions.HTTPError as errh:
         print ("HTTP Error:",errh)
