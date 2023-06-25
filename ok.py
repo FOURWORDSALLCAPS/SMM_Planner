@@ -1,106 +1,55 @@
-import hashlib  
-import json,requests
 import requests
 import hashlib
 import time
 import json
 
 
-app_id = '512001977033' 
-app_public_key = 'CKMLCDLGDIHBABABA'
-app_secret_key = 'f77099cf490198c8c1a1576f944797ce' 
-access_token = 'tkn1ovwGmnQGCFC80PkOR2Hm3brtjuEmI6HNHUI3me0hDAM4pmBxDikFDRjpbfMBYs4le'
-group_id = '70000002836096' # ID группы, в которой вы хотите опубликовать сообщение
-message = 'Hello, world!' # Сообщение, которое вы хотите опубликовать
+
+def create_sign(ok_public_key, ok_group_id, method, ok_access_token, ok_secret_key): 
+    timestamp = str(time.time())
+    sign_str = f"application_key={ok_public_key}ok_group_id={ok_group_id}method={method}type=GROUP_THEMEformat=jsonmethod={method}{timestamp}{ok_access_token}{ok_secret_key}"
+    sign = hashlib.md5(sign_str.encode('utf-8')).hexdigest()
+    return sign
 
 
-params = {
-    "application_key": app_public_key,
-    "method": "photosV2.getUploadUrl",
-    "format": "json",
-    "gid": group_id,
-    "count": 1  # Number of photos to be uploaded
-}
+def create_url(ok_public_key, method, sign, ok_access_token):
+    url = f"https://api.ok.ru/fb.do?application_key={ok_public_key}&method={method}&format=json&sig={sign}&ok_access_token={ok_access_token}"
+    return url
 
-#Signature
-params_str = "".join(f"{k}={v}" for k, v in sorted(params.items()))
-sig = hashlib.md5((params_str + app_secret_key).encode('utf-8')).hexdigest()
-
-params["access_token"] = access_token
-params["sig"] = sig
-
-response = requests.post("https://api.ok.ru/fb.do", params=params)
-data = response.json()
-
-upload_url = data["upload_url"]
-
-print("upload_url:", upload_url)
-
-
-with open("test.png", "rb") as f:
-    files = {"file": f}
-
-    response = requests.post(upload_url, files=files)
-
-
-
-data = response.json()
-
-pprint.pprint(data)
-
-
-photo_id_key = list(data["photos"].keys())[0]
-photo_token = data["photos"][photo_id_key]["token"]
-
-print("photo_id_key:", photo_id_key)
-print("photo_token:", photo_token)
-
-
-
-method = 'mediatopic.post'
-timestamp = str(int(time.time()))
-
-
-sign_str = f"application_key={app_public_key}group_id={group_id}method={method}type=GROUP_THEMEformat=jsonmethod={method}{timestamp}{access_token}{app_secret_key}"
-sign = hashlib.md5(sign_str.encode('utf-8')).hexdigest()
-
-
-url = f"https://api.ok.ru/fb.do?application_key={app_public_key}&method={method}&format=json&sig={sign}&access_token={access_token}"
-
-
-attachment = {
-  "media": [
-    {
-      "type": "photo",
-      "list": [
-        { "id": photo_id_key },
-        { "photoId": photo_token }
-      ]
-    },
-    {
-      "type": "text",
-      "text": "Text1"
+def create_post_ok(ok_public_key, ok_group_id, ok_access_token, ok_secret_key, text_publication):
+    method = 'mediatopic.post'
+    attachment = {
+        'media': [
+            {
+            'type': 'text',
+            'text': text_publication
+            }
+        ]
     }
-  ]
-}
 
+    sign = create_sign(ok_public_key, ok_group_id, method, ok_access_token, ok_secret_key)    
+    url = create_url(ok_public_key, method, sign, ok_access_token)
+    
+    response = requests.post(url, data={'gid': ok_group_id, 'type': 'GROUP_THEME',
+                                        'attachment': json.dumps(attachment)})
+    
+    try:
+        response = requests.post(url, data={'gid': ok_group_id, 'type': 'GROUP_THEME', 'attachment': json.dumps(attachment)})
+        response.raise_for_status()
+    except requests.exceptions.HTTPError as errh:
+        print ("HTTP Error:",errh)
+    except requests.exceptions.ConnectionError as errc:
+        print ("Error Connecting:",errc)
+    except requests.exceptions.Timeout as errt:
+        print ("Timeout Error:",errt)
+    except requests.exceptions.RequestException as err:
+        print ("Something went wrong with the request:",err)
+    
+    if response.status_code == 200:
+        print('Post published successfully.')
+    else:
+        print('Failed to publish post.', response.status_code, response.text)
 
-try:
-    response = requests.post(url, data={'gid': group_id, 'type': 'GROUP_THEME', 'attachment': json.dumps(attachment)})
-    response.raise_for_status()
-except requests.exceptions.HTTPError as errh:
-    print ("HTTP Error:",errh)
-except requests.exceptions.ConnectionError as errc:
-    print ("Error Connecting:",errc)
-except requests.exceptions.Timeout as errt:
-    print ("Timeout Error:",errt)
-except requests.exceptions.RequestException as err:
-    print ("Something went wrong with the request:",err)
+    ok_post_id = response.json()
 
-#Проверка ответа
-if response.status_code == 200:
-    print('Post published successfully.')
-else:
-    pprint.pprint('Failed to publish post.', response.status_code, response.text)
-
-pprint.pprint(response.json())
+    return ok_post_id
