@@ -30,8 +30,7 @@ def create_post_ok(ok_public_key, ok_group_id, ok_access_token, ok_secret_key, t
     sign = create_sign(ok_public_key, ok_group_id, method, ok_access_token, ok_secret_key)    
     url = create_url(ok_public_key, method, sign, ok_access_token)
     
-    response = requests.post(url, data={'gid': ok_group_id, 'type': 'GROUP_THEME',
-                                        https://ok.ru/group/70000002836096/topic/155310482597248, 'attachment': json.dumps(attachment)})
+    response = requests.post(url, data={'gid': ok_group_id, 'type': 'GROUP_THEME', 'attachment': json.dumps(attachment)})
     
     try:
         response = requests.post(url, data={'gid': ok_group_id, 'type': 'GROUP_THEME', 'attachment': json.dumps(attachment)})
