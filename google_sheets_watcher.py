@@ -5,7 +5,7 @@ import datetime
 import logging
 
 from environs import Env
-from ok import create_post_ok, delete_post_ok
+from ok import create_post_ok
 from upload_photo import upload_photo_to_album
 from create_post import create_post_vk, create_post_tg
 from delete_post import delete_post_vk, delete_post_tg
@@ -92,8 +92,8 @@ async def main():
                                 link_post_ок = get_link_post_ок(ok_group_id, ok_post_id)
                                 fill_cell(credentials_file, spreadsheet_id, f'O{index + 2}', link_post_ok)
                                 fill_cell(credentials_file, spreadsheet_id, f'R{index + 2}', 'Да')
-                                if date_delete_publication >= today:
-                                    ok_posts_ids_to_delete.append(ok_post_id)
+                                #if date_delete_publication >= today:
+                                    #tg_posts_ids_to_delete.append(message_id)
                                 print('Создание поста в OK прошло успешно!')
                             
                             time.sleep(0.5)
