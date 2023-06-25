@@ -6,10 +6,11 @@ import logging
 
 from environs import Env
 from upload_photo import upload_photo_to_album
-from create_post import create_post_vk, create_post_tg
-from delete_post import delete_post_vk, delete_post_tg
-from get_link_post import get_link_post_vk, get_link_post_tg
-from secondary_functions import get_documents, get_spreadsheet, download_photo, fill_cell, cut_url
+from create_post import create_post_vk, create_post_tg, create_post_ok
+from delete_post import delete_post_vk, delete_post_tg, delete_post_ok
+from get_link_post import get_link_post_vk, get_link_post_tg, get_link_post_ok
+from secondary_functions import get_documents, get_spreadsheet, download_photo, \
+    fill_cell, cut_url,  create_url, create_sign
 from oauth2client.service_account import ServiceAccountCredentials
 
 
@@ -24,6 +25,8 @@ async def main():
     vk_posts_ids_to_delete = []
 
     tg_posts_ids_to_delete = []
+
+    ok_posts_ids_to_delete = []
 
     while True:
         sheet = client.open('SMMPlanner').sheet1
@@ -40,7 +43,7 @@ async def main():
                 row_dict[header] = val
             try:
                 if row_dict.get('Дата постинга\nпубликации'):
-                    date_publication = datetime.datetime.strptime(row_dict['Дата постинга\nпубликации'], '%d.%m.%Y')\
+                    date_publication = datetime.datetime.strptime(row_dict['Дата постинга\nпубликации'], '%d.%m.%Y') \
                         .date()
                 else:
                     date_publication = None
@@ -50,7 +53,7 @@ async def main():
                 else:
                     date_delete_publication = None
                 if row_dict.get('Время постинга\nпубликации'):
-                    time_publication = datetime.datetime.strptime(row_dict['Время постинга\nпубликации'], '%H:%M')\
+                    time_publication = datetime.datetime.strptime(row_dict['Время постинга\nпубликации'], '%H:%M') \
                         .strftime('%H:%M')
                 else:
                     time_publication = None
@@ -84,6 +87,18 @@ async def main():
                                 if date_delete_publication >= today:
                                     tg_posts_ids_to_delete.append(message_id)
                                 print('Создание поста в Telegram прошло успешно!')
+                            elif row_dict.get('Соц. сеть\nOK') == 'Да' and not row_dict.get('Статус публикации\nOK'):
+                                sign = create_sign(ok_public_key, ok_group_id, method,
+                                                   ok_access_token, ok_secret_key)
+                                url = create_url(ok_public_key, method, sign, ok_access_token)
+                                post_id = create_post_ok(ok_group_id, text_publication, url, ok_access_token)
+                                link_post_ok = get_link_post_ok(ok_group_id, post_id)
+                                fill_cell(credentials_file, spreadsheet_id, f'P{index + 2}', link_post_ok)
+                                fill_cell(credentials_file, spreadsheet_id, f'S{index + 2}', 'Да')
+                                if date_delete_publication >= today:
+                                    ok_posts_ids_to_delete.append(post_id)
+                                print('Создание поста в OK прошло успешно!')
+
                             time.sleep(0.5)
                         except Exception as e:
                             if isinstance(e, IndexError) and str(e) == 'list index out of range':
@@ -101,6 +116,10 @@ async def main():
                                 for message_id in tg_posts_ids_to_delete:
                                     await delete_post_tg(tg_token, tg_chat_id, message_id)
                                 print('Удаление поста в Telegram прошло успешно!')
+                            if ok_posts_ids_to_delete:
+                                for post_id in ok_posts_ids_to_delete:
+                                    delete_post_ok(ok_group_id, ok_access_token, post_id, ok_public_key, ok_secret_key)
+                                print('Удаление поста в OK прошло успешно!')
                         except Exception as e:
                             fill_cell(credentials_file, spreadsheet_id, f'M{index + 2}', f'{e}')
             except Exception as e:
@@ -121,7 +140,12 @@ if __name__ == '__main__':
     tg_token = env('TG_TOKEN')
     tg_chat_id = env('TG_CHAT_ID')
     album_id = env('ALBUM_ID')
+    ok_public_key = env('OK_PUBLIC_KEY')
+    ok_secret_key = env('OK_SECRET_KEY')
+    ok_access_token = env('OK_TOKEN')
+    ok_group_id = env('OK_GROUP_ID')
     file_path = env('FILE_PATH')
+    method = 'mediatopic.post'
     loop = asyncio.get_event_loop()
     loop.run_until_complete(main())
     loop.close()
