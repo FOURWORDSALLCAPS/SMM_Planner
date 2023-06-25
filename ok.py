@@ -18,15 +18,13 @@ def create_url(ok_public_key, method, sign, ok_access_token):
 
 def upload_photo_ok(ok_public_key, ok_group_id, ok_access_token, ok_secret_key):
     method = 'photosV2.getUploadUrl'
-    
     sign = create_sign(ok_public_key, ok_group_id, method, ok_access_token, ok_secret_key)
     url = create_url(ok_public_key, method, sign, ok_access_token)
     
     response = requests.post(url, data={'gid': ok_group_id, 'count': 1, 'access_token': ok_access_token})
-
     upload_url = response.json()['upload_url']
 
-    files = {"file": ("image.jpg", open("image.jpg", "rb"), 'image/jpg')}
+    files = {"file": ("image.jpg", open("images/image.jpg", "rb"), 'image/jpeg')}
     upload_response = requests.post(upload_url, files=files)
 
     photo_keys = list(upload_response.json()['photos'].keys())
