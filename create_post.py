@@ -3,6 +3,7 @@ import requests
 import json
 
 from vkbottle import API
+from secondary_functions import create_url, create_sign
 
 
 async def create_post_tg(token, chat_id, img, text_publication):
@@ -29,12 +30,21 @@ async def create_post_vk(token, chat_id, text_publication, photo):
         print(f'Произошла ошибка при создании поста: {e}')
 
 
-def create_post_ok(group_id, text_publication, url, access_token):
+def create_post_ok(group_id, text_publication, public_key, access_token, photo_attachment, secret_key):
+    method = 'mediatopic.post'
+
+    sign = create_sign(public_key, group_id, method, access_token, secret_key)
+    url = create_url(public_key, method, sign, access_token)
+
     attachment = {
         'media': [
             {
                 'type': 'text',
                 'text': text_publication
+            },
+            {
+                'type': 'photo',
+                'list': photo_attachment['list']
             }
         ]
     }

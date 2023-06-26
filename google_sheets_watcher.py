@@ -5,12 +5,11 @@ import datetime
 import logging
 
 from environs import Env
-from upload_photo import upload_photo_to_album
 from create_post import create_post_vk, create_post_tg, create_post_ok
 from delete_post import delete_post_vk, delete_post_tg, delete_post_ok
 from get_link_post import get_link_post_vk, get_link_post_tg, get_link_post_ok
 from secondary_functions import get_documents, get_spreadsheet, download_photo, \
-    fill_cell, cut_url,  create_url, create_sign
+    fill_cell, cut_url,  upload_photo_ok, upload_photo_vk
 from oauth2client.service_account import ServiceAccountCredentials
 
 
@@ -70,7 +69,7 @@ async def main():
                             text_publication = get_documents(credentials_file, url_google_docs)
                             download_photo(text_sheet, index + 1)
                             if row_dict.get('Соц. сеть\nVK') == 'Да' and not row_dict.get('Статус публикации\nVk'):
-                                photo = await upload_photo_to_album(vk_token, vk_group_id, album_id, file_path)
+                                photo = await upload_photo_vk(vk_token, vk_group_id, album_id, file_path)
                                 post_id = await create_post_vk(vk_token, vk_chat_id, text_publication, photo)
                                 link_post_vk = get_link_post_vk(vk_group_id, post_id)
                                 fill_cell(credentials_file, spreadsheet_id, f'N{index + 2}', link_post_vk)
@@ -88,10 +87,9 @@ async def main():
                                     tg_posts_ids_to_delete.append(message_id)
                                 print('Создание поста в Telegram прошло успешно!')
                             elif row_dict.get('Соц. сеть\nOK') == 'Да' and not row_dict.get('Статус публикации\nOK'):
-                                sign = create_sign(ok_public_key, ok_group_id, method,
-                                                   ok_access_token, ok_secret_key)
-                                url = create_url(ok_public_key, method, sign, ok_access_token)
-                                post_id = create_post_ok(ok_group_id, text_publication, url, ok_access_token)
+                                photo_attachment = upload_photo_ok(ok_public_key, ok_group_id, ok_access_token, ok_secret_key)
+                                post_id = create_post_ok(ok_group_id, text_publication, ok_public_key,
+                                                         ok_access_token, photo_attachment, ok_secret_key)
                                 link_post_ok = get_link_post_ok(ok_group_id, post_id)
                                 fill_cell(credentials_file, spreadsheet_id, f'P{index + 2}', link_post_ok)
                                 fill_cell(credentials_file, spreadsheet_id, f'S{index + 2}', 'Да')
@@ -145,7 +143,6 @@ if __name__ == '__main__':
     ok_access_token = env('OK_TOKEN')
     ok_group_id = env('OK_GROUP_ID')
     file_path = env('FILE_PATH')
-    method = 'mediatopic.post'
     loop = asyncio.get_event_loop()
     loop.run_until_complete(main())
     loop.close()
