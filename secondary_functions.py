@@ -48,7 +48,7 @@ def get_spreadsheet(credentials_file, spreadsheet_id):
     try:
         values = service.spreadsheets().values().get(
             spreadsheetId=spreadsheet_id,
-            range='A1:P10',
+            range='A1:P100',
             majorDimension='ROWS',
         ).execute()
     except HttpError:
