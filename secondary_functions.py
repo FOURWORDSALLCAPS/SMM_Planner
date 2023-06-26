@@ -2,11 +2,13 @@ import httplib2
 import urllib.request
 import hashlib
 import time
+import requests
 
 from apiclient import discovery
 from oauth2client.service_account import ServiceAccountCredentials
 from googleapiclient.errors import HttpError
 from urllib.parse import urlparse
+from vkbottle import API, VKAPIError
 
 
 def get_documents(credentials_file, document_id):
@@ -83,15 +85,57 @@ def cut_url(text_sheet, cell_id):
     return doc_id.decode('utf-8')
 
 
-def get_url_photo(text_sheet, cell_id):
-    url_photo = text_sheet['values'][cell_id][1]
+def upload_photo_ok(public_key, group_id, access_token, secret_key):
+    method = 'photosV2.getUploadUrl'
+    sign = create_sign(public_key, group_id, method, access_token, secret_key)
+    url = create_url(public_key, method, sign, access_token)
 
-    return url_photo
+    response = requests.post(url, data={'gid': group_id, 'count': 1, 'access_token': access_token})
+    response.raise_for_status()
+    if not response.ok:
+        return None
+    upload_url = response.json()['upload_url']
+
+    files = {"file": ("image.jpeg", open("images/image.jpeg", "rb"), 'image/jpeg')}
+    upload_response = requests.post(upload_url, files=files)
+
+    photo_keys = list(upload_response.json()['photos'].keys())
+    photo_data = upload_response.json()['photos'][photo_keys[0]]
+
+    photo_token = photo_data.get("token")
+
+    photo_attachment = {'type': 'photo', 'list': [{"id": photo_token}]}
+
+    return photo_attachment
+
+
+async def upload_photo_vk(token, group_id, album_id, file_path):
+    try:
+        api = API(token)
+        upload_url = await api.photos.get_upload_server(group_id=group_id, album_id=album_id)
+        response = requests.post(upload_url.upload_url, files={'photo': open(file_path, 'rb')})
+        response.raise_for_status()
+        if not response.ok:
+            return None
+        result_upload = response.json()
+        photos_list = result_upload['photos_list']
+        server = result_upload['server']
+        hash_value = result_upload['hash']
+        photo_info = await api.photos.save(album_id=album_id,
+                                           group_id=group_id,
+                                           server=server,
+                                           hash=hash_value,
+                                           photos_list=photos_list)
+        attachment = f"photo{photo_info[0].owner_id}_{photo_info[0].id}"
+        return attachment
+    except VKAPIError as e:
+        print(f"VK API error occurred: {e}")
+        return None
 
 
 def download_photo(text_sheet, cell_id):
     url = text_sheet['values'][cell_id][1]
-    filename = "image.jpg"
+    filename = "image.jpeg"
     urllib.request.urlretrieve(url, "images/" + filename)
 
 
