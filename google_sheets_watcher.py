@@ -7,10 +7,27 @@ import logging
 from environs import Env
 from create_post import create_post_vk, create_post_tg, create_post_ok
 from delete_post import delete_post_vk, delete_post_tg, delete_post_ok
-from get_link_post import get_link_post_vk, get_link_post_tg, get_link_post_ok
 from secondary_functions import get_documents, get_spreadsheet, download_photo, \
     fill_cell, cut_url,  upload_photo_ok, upload_photo_vk
 from oauth2client.service_account import ServiceAccountCredentials
+
+
+def get_link_post_vk(group_id, post_id):
+    post_url = f'https://vk.com/wall-{group_id}_{post_id}'
+
+    return post_url
+
+
+def get_link_post_tg(group_id, post_id):
+    post_url = f'https://t.me/{group_id[1:]}/{post_id}'
+
+    return post_url
+
+
+def get_link_post_ok(group_id, post_id):
+    post_url = f'https://ok.ru/group/{group_id}/topic/{post_id}'
+
+    return post_url
 
 
 async def main():
@@ -87,7 +104,8 @@ async def main():
                                     tg_posts_ids_to_delete.append(message_id)
                                 print('Создание поста в Telegram прошло успешно!')
                             elif row_dict.get('Соц. сеть\nOK') == 'Да' and not row_dict.get('Статус публикации\nOK'):
-                                photo_attachment = upload_photo_ok(ok_public_key, ok_group_id, ok_access_token, ok_secret_key)
+                                photo_attachment = upload_photo_ok(ok_public_key, ok_group_id,
+                                                                   ok_access_token, ok_secret_key)
                                 post_id = create_post_ok(ok_group_id, text_publication, ok_public_key,
                                                          ok_access_token, photo_attachment, ok_secret_key)
                                 link_post_ok = get_link_post_ok(ok_group_id, post_id)
